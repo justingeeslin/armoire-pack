@@ -8,7 +8,7 @@ import packaide
 
 import runpod
 
-def pack(parts):
+def pack(parts, holes=""):
     if not isinstance(parts, str):
         return {"error": "Please provide a String"}
 
@@ -28,7 +28,7 @@ def pack(parts):
     # case, a square in the upper-left-hand corner.
     sheet = """
        <svg width="300" height="300" viewBox="0 0 300 300">
-         <rect x="0" y="0" width="100" height="100" />
+         """ + holes + """
        </svg>
        """
 
