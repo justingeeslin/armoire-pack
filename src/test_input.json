@@ -1,5 +1,5 @@
 {
     "input": {
-        "greeting": "world"
+        "parts": "<svg viewBox=\"0 0 432.13 593.04\">\n         <rect width=\"100\" height=\"50\" />\n         <rect width=\"50\" height=\"100\" />\n         <ellipse rx=\"20\" ry=\"20\" />\n       </svg>"
     }
 }
