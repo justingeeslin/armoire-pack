@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ cmake git libcgal-dev libboost-all-dev pkg-config
 RUN pip install --no-cache-dir -r requirements.txt gunicorn parameterized shapely svgelements
 
-RUN git clone https://github.com/DanielLiamAnderson/Packaide.git
+RUN git clone https://github.com/justingeeslin/Packaide.git
 WORKDIR /app/Packaide
 RUN mkdir -p build \
  && cmake -S /app/Packaide/ -B build  \
