@@ -3,7 +3,6 @@ import os
 import pytest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
-from src import rp_handler
 
 from BinPack import BinPack
 

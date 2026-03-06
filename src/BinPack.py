@@ -6,11 +6,17 @@ packaide_path = os.path.join('/app', 'Packaide', 'python')
 if packaide_path not in sys.path:
     sys.path.append(packaide_path)
 
+import packaide
+
 class BinPack:
-    def __init__(self, bin, parts):
-        self.bin = bin
-        self.parts = parts
+    def __init__(self):
         self.holes = None
+
+        ## A default bin
+        self.bin = """
+           <svg width="300" height="300" viewBox="0 0 300 300">
+           </svg>
+        """
 
     def pack(self):
         if not isinstance(self.parts, str):

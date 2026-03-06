@@ -4,17 +4,11 @@ import packaide
 
 import runpod
 
-
-
-
 def handler(job):
-    job_input = job["input"]
-
-    # basic validation for required arg
-    if "parts" not in job_input:
-        return {"error": "Missing required parameter 'parts'"}
-
-    return pack(**job_input)
+    myBinPack = BinPack()
+    myBinPack.parts = job["input"]['parts']
+    myBinPack.bin = job["input"]['bin']
+    return myBinPack.pack()
 
 
 # Start the handler only if this script is run directly
