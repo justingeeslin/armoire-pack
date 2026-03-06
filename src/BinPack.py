@@ -22,45 +22,10 @@ class BinPack:
         if not isinstance(self.parts, str):
             return {"error": "Please provide at least one part."}
 
-            # Example usage (from your previous cell)
-            # Shapes are provided in SVG format
-
-        # shapes = """
-        #    <svg viewBox="0 0 432.13 593.04">
-        #      <rect width="100" height="50" />
-        #      <rect width="50" height="100" />
-        #      <ellipse rx="20" ry="20" />
-        #    </svg>
-        #    """
-
-        # The target sheet / material is also represented as an SVG
-        # document. Shapes given on the sheet are interpreted as
-        # holes that must be avoided when placing new parts. In this
-        # case, a square in the upper-left-hand corner.
-
-        # Adds holes to the bin when needed
-        def add_children(svg_string, children):
-            # children: list of '<rect ... />' strings
-            insert = "\n".join(children)
-            return svg_string.replace("</svg>", f"\n{insert}\n</svg>")
-
-        if isinstance(self.holes, str):
-            self.bin = add_children(
-                self.bin,
-                [
-                    self.holes
-                ]
-            )
-
-        print("Parts:")
-        print(self.parts)
-
-        print("Bin:")
-        print(self.bin)
 
         # Attempts to pack as many of the parts as possible.
         result, placed, fails = packaide.pack(
-            [self.bin],  # A list of sheets (SVG documents)
+            [self.bin, self.bin, self.bin],  # A list of sheets (SVG documents)
             self.parts,  # An SVG document containing the parts
             tolerance=2.5,  # Discretization tolerance
             offset=5,  # The offset distance around each shape (dilation)
