@@ -1,0 +1,7 @@
+{
+    "id": "test_shirt-bin",
+    "input": {
+        "bin": "<svg xmlns=\"http://www.w3.org/2000/svg\"\n     width=\"561px\" height=\"570px\"\n     viewBox=\"0.00 0.00 561.00 570.00\">\n  <polygon id=\"full\" points=\"561.00,90.00 441.00,29.00 350.00,0.00 327.00,15.00 286.00,21.00 235.00,17.00 202.00,2.00 123.00,30.00 0.00,95.00 60.00,202.00 110.00,191.00 111.00,570.00 458.00,566.00 455.00,186.00 505.00,199.00\" fill=\"none\" stroke=\"#0091EA\" stroke-width=\"3\"/>\n</svg>",
+        "parts": "<svg viewBox=\"0 0 432.13 593.04\">\n         <rect width=\"100\" height=\"50\" />\n         <rect width=\"50\" height=\"100\" />\n         <ellipse rx=\"20\" ry=\"20\" />\n       </svg>"
+    }
+}
