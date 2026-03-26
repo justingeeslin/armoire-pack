@@ -7,7 +7,10 @@ import runpod
 def handler(job):
     myBinPack = BinPack()
     myBinPack.parts = job["input"]['parts']
-    myBinPack.bin = job["input"]['bin']
+
+    if job["input"]['bin']:
+        myBinPack.bin = job["input"]['bin']
+
     return myBinPack.pack()
 
 
