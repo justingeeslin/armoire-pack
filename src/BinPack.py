@@ -41,5 +41,6 @@ class BinPack:
             "result": result,
             "placed": placed,
             "fails": fails,
+            "total": placed + fails,
             "description": "{} parts were placed. {} parts could not fit on the sheets".format(placed, fails),
         }
