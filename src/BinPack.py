@@ -1,5 +1,7 @@
 import sys
 import os
+import math
+import xml.etree.ElementTree as ET
 
 sys.path.append('/home/parallels/PycharmProjects/Packaide/python')
 packaide_path = os.path.join('/app', 'Packaide', 'python')
@@ -29,18 +31,36 @@ class BinPack:
 
         return self.pack()
 
+    def _get_bin_svg_size(self):
+        root = ET.fromstring(self.bin)
+
+        width = float(root.get("width").replace("px", "").strip())
+        height = float(root.get("height").replace("px", "").strip())
+
+        return width, height
+
     def _make_irregular_stock_with_packed_holes(self):
         holes = """
             <svg xmlns="http://www.w3.org/2000/svg"
                  width="135000px" height="142800px"
                  viewBox="0.00 0.00 135000.00 142800.00">"""
 
-        # todo scale to match the bin size.
-        holeWidth = 50
-        numberOfHoles = 400
+        # holes should be roughtly this percentage of the SVG
+        # how many holes will fit across the image
+        holes_across = 32
+        hole_scale = 1/holes_across
+        width, height = self._get_bin_svg_size()
 
+        holeWidth = width * hole_scale
+
+        # how many holes will fit vertically?
+        holes_down = height / holeWidth
+
+        # Total number of holes to fill the image should be a *max* of down x across (probably a lot less in actuality)
+        numberOfHoles = int(math.ceil(holes_across * holes_down))
+        print("DEBUG numberOfHoles: ", numberOfHoles)
         for i in range(numberOfHoles):
-            holes = holes + f'<rect width="{holeWidth}" height="{holeWidth}" />'
+            holes = holes + f'<circle r="{holeWidth / 2}" />'
 
         holes = holes + "</svg>"
 
