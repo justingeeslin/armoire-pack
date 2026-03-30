@@ -94,7 +94,7 @@ class BinPack:
             [self.bin, self.bin, self.bin],  # A list of sheets (SVG documents)
             self.parts,  # An SVG document containing the parts
             tolerance=2.5,  # Discretization tolerance
-            offset=5,  # The offset distance around each shape (dilation)
+            offset=0,  # The offset distance around each shape (dilation)
             partial_solution=True,  # Whether to return a partial solution
             rotations=1,  # The number of rotations of parts to try
             persist=True  # Cache results to speed up next run
