@@ -56,8 +56,11 @@ class BinPack:
         # how many holes will fit vertically?
         holes_down = height / holeWidth
 
-        # Total number of holes to fill the image should be a *max* of down x across (probably a lot less in actuality)
-        numberOfHoles = int(math.ceil(holes_across * holes_down))
+        # Total number of holes to fill the image should be a *max* of down x across
+        numberOfHoles = holes_across * holes_down
+        # Assume only 20% of the image will be empty.
+        numberOfHoles = int(math.ceil(numberOfHoles * 0.2))
+
         print("DEBUG numberOfHoles: ", numberOfHoles)
         for i in range(numberOfHoles):
             holes = holes + f'<circle r="{holeWidth / 2}" />'
