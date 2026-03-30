@@ -101,6 +101,8 @@ class BinPack:
         )
 
         result_object = {
+            "parts": self.parts,
+            "bin": self.bin,
             "result": result[0][1],
             "placed": placed,
             "fails": fails,
