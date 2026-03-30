@@ -12,6 +12,7 @@ import packaide
 
 class BinPack:
     def __init__(self):
+        self.parts = None
 
         ## A default bin
         self.bin = """
