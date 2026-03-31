@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 standard_width = 1000
 standard_height = 800
 
-def combine_svg_strings(svg1: str, svg2: str) -> str:
+def combine_stock_garment_svg_strings(stock_svg: str, garment_pieces_svg: str) -> str:
     """
     Combine two SVG strings into a single SVG by placing their child elements
     under one new root SVG.
@@ -24,8 +24,8 @@ def combine_svg_strings(svg1: str, svg2: str) -> str:
     This version overlays them in the same coordinate system.
     """
 
-    root1 = ET.fromstring(svg1)
-    root2 = ET.fromstring(svg2)
+    root_stock_svg = ET.fromstring(stock_svg)
+    root_garment_pieces_svg = ET.fromstring(garment_pieces_svg)
 
     # SVG namespace
     svg_ns = "http://www.w3.org/2000/svg"
@@ -34,13 +34,13 @@ def combine_svg_strings(svg1: str, svg2: str) -> str:
     def strip_tag(tag: str) -> str:
         return tag.split("}", 1)[-1] if "}" in tag else tag
 
-    if strip_tag(root1.tag) != "svg" or strip_tag(root2.tag) != "svg":
+    if strip_tag(root_stock_svg.tag) != "svg" or strip_tag(root_garment_pieces_svg.tag) != "svg":
         raise ValueError("Both inputs must have an <svg> root element.")
 
     # Prefer viewBox from first SVG, then second, otherwise fallback
-    viewbox = root1.get("viewBox") or root2.get("viewBox") or "0 0 {standard_width} {standard_height}"
-    width = root1.get("width") or root2.get("width") or standard_width
-    height = root1.get("height") or root2.get("height") or standard_height
+    width = root_stock_svg.get("width") or root_garment_pieces_svg.get("width") or standard_width
+    height = root_stock_svg.get("height") or root_garment_pieces_svg.get("height") or standard_height
+    viewbox = root_stock_svg.get("viewBox") or root_garment_pieces_svg.get("viewBox") or "0 0 {width} {height}"
 
     combined_root = ET.Element(
         f"{{{svg_ns}}}svg",
@@ -52,11 +52,15 @@ def combine_svg_strings(svg1: str, svg2: str) -> str:
     )
 
     # Copy children from both SVGs into the new root
-    for child in list(root1):
-        combined_root.append(copy.deepcopy(child))
+    for child in list(root_stock_svg):
+        new_child = copy.deepcopy(child)
+        new_child.set("role", "stock")
+        combined_root.append(new_child)
 
-    for child in list(root2):
-        combined_root.append(copy.deepcopy(child))
+    for child in list(root_garment_pieces_svg):
+        new_child = copy.deepcopy(child)
+        new_child.set("role", "garment")
+        combined_root.append(new_child)
 
     return ET.tostring(combined_root, encoding="unicode")
 
@@ -160,7 +164,7 @@ class BinPack:
             "bin": self.bin,
             "result": result[0][1],
             # Packed pieces plus the stock
-            "garment_marker": combine_svg_strings(self.stock, result[0][1]),
+            "garment_marker": combine_stock_garment_svg_strings(self.stock, result[0][1]),
             "placed": placed,
             "fails": fails,
             "total": placed + fails,
