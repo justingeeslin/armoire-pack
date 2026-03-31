@@ -45,7 +45,6 @@ def combine_svg_strings(svg1: str, svg2: str) -> str:
     combined_root = ET.Element(
         f"{{{svg_ns}}}svg",
         {
-            "xmlns": svg_ns,
             "viewBox": viewbox,
             "width": width,
             "height": height,
