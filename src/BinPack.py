@@ -10,15 +10,69 @@ if packaide_path not in sys.path:
 
 import packaide
 
+import copy
+import xml.etree.ElementTree as ET
+
+standard_width = 1000
+standard_height = 800
+
+def combine_svg_strings(svg1: str, svg2: str) -> str:
+    """
+    Combine two SVG strings into a single SVG by placing their child elements
+    under one new root SVG.
+
+    This version overlays them in the same coordinate system.
+    """
+
+    root1 = ET.fromstring(svg1)
+    root2 = ET.fromstring(svg2)
+
+    # SVG namespace
+    svg_ns = "http://www.w3.org/2000/svg"
+    ET.register_namespace("", svg_ns)
+
+    def strip_tag(tag: str) -> str:
+        return tag.split("}", 1)[-1] if "}" in tag else tag
+
+    if strip_tag(root1.tag) != "svg" or strip_tag(root2.tag) != "svg":
+        raise ValueError("Both inputs must have an <svg> root element.")
+
+    # Prefer viewBox from first SVG, then second, otherwise fallback
+    viewbox = root1.get("viewBox") or root2.get("viewBox") or "0 0 {standard_width} {standard_height}"
+    width = root1.get("width") or root2.get("width") or standard_width
+    height = root1.get("height") or root2.get("height") or standard_height
+
+    combined_root = ET.Element(
+        f"{{{svg_ns}}}svg",
+        {
+            "xmlns": svg_ns,
+            "viewBox": viewbox,
+            "width": width,
+            "height": height,
+        },
+    )
+
+    # Copy children from both SVGs into the new root
+    for child in list(root1):
+        combined_root.append(copy.deepcopy(child))
+
+    for child in list(root2):
+        combined_root.append(copy.deepcopy(child))
+
+    return ET.tostring(combined_root, encoding="unicode")
+
 class BinPack:
     def __init__(self):
         self.parts = None
 
-        ## A default bin
-        self.bin = """
+        ## Stock (the original bin to be packed with garment pieces)
+        self.stock = """
            <svg width="300" height="300" viewBox="0 0 300 300">
            </svg>
         """
+
+        ## Bin (changes throughout the various packing operations)
+        self.bin = self.stock
 
     def _detect_irregular_stock(self):
         # Assume its all irregular for now.
@@ -103,8 +157,11 @@ class BinPack:
 
         result_object = {
             "parts": self.parts,
+            "stock": self.stock,
             "bin": self.bin,
             "result": result[0][1],
+            # Packed pieces plus the stock
+            "garment_marker": combine_svg_strings(self.stock, result[0][1]),
             "placed": placed,
             "fails": fails,
             "total": placed + fails,
