@@ -40,16 +40,17 @@ class BinPack:
         return width, height
 
     def _make_irregular_stock_with_packed_holes(self):
-        holes = """
+        width, height = self._get_bin_svg_size()
+
+        holes = f"""
             <svg xmlns="http://www.w3.org/2000/svg"
-                 width="135000px" height="142800px"
-                 viewBox="0.00 0.00 135000.00 142800.00">"""
+                 width="{width}px" height="{height}px"
+                 viewBox="0.00 0.00 {width} {height}">"""
 
         # holes should be roughtly this percentage of the SVG
         # how many holes will fit across the image
         holes_across = 32
         hole_scale = 1/holes_across
-        width, height = self._get_bin_svg_size()
 
         holeWidth = width * hole_scale
 
