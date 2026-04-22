@@ -12,13 +12,16 @@ def handler(job):
     if 'stock' in job["input"]:
         # When a custom bin is supplied, apply it and make irregular stock before packing
         myBinPack.stock = job["input"]['stock']
-        # The first stock is the inital bin
+        # The initial bin is the stock
         myBinPack.bin = myBinPack.stock
 
         result = myBinPack.make_irregular_stock_then_pack()
     else:
         # If not bin is supplied us the default one and pack
         result = myBinPack.pack()
+
+    if 'id' in job["input"]:
+        result.id = job["id"]
 
     return result
 
