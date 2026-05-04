@@ -2,7 +2,7 @@ import sys
 import os
 import math
 import xml.etree.ElementTree as ET
-
+import SVGTool
 sys.path.append('/home/parallels/PycharmProjects/Packaide/python')
 packaide_path = os.path.join('/app', 'Packaide', 'python')
 if packaide_path not in sys.path:
@@ -16,65 +16,9 @@ from copy import deepcopy
 standard_width = 1000
 standard_height = 800
 
-def combine_stock_garment_svg_strings(stock_svg: str, garment_pieces_svg: str) -> str:
-    """
-    Combine two SVG strings into a single SVG by placing their child elements
-    under one new root SVG.
-
-    This version overlays them in the same coordinate system.
-    """
-
-    root_stock_svg = ET.fromstring(stock_svg)
-    root_garment_pieces_svg = ET.fromstring(garment_pieces_svg)
-
-    # SVG namespace
-    svg_ns = "http://www.w3.org/2000/svg"
-    ET.register_namespace("", svg_ns)
-
-    def strip_tag(tag: str) -> str:
-        return tag.split("}", 1)[-1] if "}" in tag else tag
-
-    if strip_tag(root_stock_svg.tag) != "svg" or strip_tag(root_garment_pieces_svg.tag) != "svg":
-        raise ValueError("Both inputs must have an <svg> root element.")
-
-    # Prefer viewBox from first SVG, then second, otherwise fallback
-    width = root_stock_svg.get("width") or root_garment_pieces_svg.get("width") or standard_width
-    height = root_stock_svg.get("height") or root_garment_pieces_svg.get("height") or standard_height
-    viewbox = root_stock_svg.get("viewBox") or root_garment_pieces_svg.get("viewBox") or "0 0 {width} {height}"
-
-    combined_root = ET.Element(
-        f"{{{svg_ns}}}svg",
-        {
-            "viewBox": viewbox,
-            "width": width,
-            "height": height,
-        },
-    )
-
-    # Copy children from both SVGs into the new root
-    for child in list(root_stock_svg):
-        new_child = copy.deepcopy(child)
-        new_child.set("role", "stock")
-        combined_root.append(new_child)
-
-    for child in list(root_garment_pieces_svg):
-        new_child = copy.deepcopy(child)
-        new_child.set("role", "garment")
-        combined_root.append(new_child)
-
-    return ET.tostring(combined_root, encoding="unicode")
-
-def strip_namespace(elem):
-    """Remove namespace from all tags in-place."""
-    for el in elem.iter():
-        if "}" in el.tag:
-            el.tag = el.tag.split("}", 1)[1]
-    return elem
-
 import xml.etree.ElementTree as ET
 
 SVG_NS = "http://www.w3.org/2000/svg"
-
 
 def strip_namespaces(elem):
     for el in elem.iter():
@@ -135,172 +79,45 @@ def restore_data_attributes(svg_string, merge_transforms=True, remove_namespaces
 
 class BinPack:
     def __init__(self):
-        self.parts = None
+        # Garment stock
+        self.stock = ""
 
-        ## Stock (the original bin to be packed with garment pieces)
-        """
+        self.default_bin = """
                    <svg width="300" height="300" viewBox="0 0 300 300">
                    </svg>
                 """
-        self.stock = []
+
+        self.parts = None
 
         ## For debug purposes
         self.garment_shaped_hole_tesselation = None
-
-        ## Bin (changes throughout the various packing operations)
-        self.bin = self.stock
 
     def _detect_irregular_stock(self):
         # Assume its all irregular for now.
         return True
 
-
-
-    def _extract_shapes_as_svgs(self, svg_string):
-        print(f" DEBUG Extracting shapes as svgs {svg_string}")
-        root = ET.fromstring(svg_string)
-
-        # Handle namespace
-        ns = ""
-        if root.tag.startswith("{"):
-            ns = root.tag.split("}")[0] + "}"
-
-        def parse_points(points_str):
-            pts = []
-            for pair in points_str.strip().split():
-                x, y = pair.split(",")
-                pts.append((float(x), float(y)))
-            return pts
-
-        def get_bbox(elem):
-            tag = elem.tag.replace(ns, "")
-
-            if tag == "rect":
-                x = float(elem.get("x", 0))
-                y = float(elem.get("y", 0))
-                w = float(elem.get("width", 0))
-                h = float(elem.get("height", 0))
-                return x, y, x + w, y + h
-
-            elif tag == "circle":
-                cx = float(elem.get("cx", 0))
-                cy = float(elem.get("cy", 0))
-                r = float(elem.get("r", 0))
-                return cx - r, cy - r, cx + r, cy + r
-
-            elif tag == "ellipse":
-                cx = float(elem.get("cx", 0))
-                cy = float(elem.get("cy", 0))
-                rx = float(elem.get("rx", 0))
-                ry = float(elem.get("ry", 0))
-                return cx - rx, cy - ry, cx + rx, cy + ry
-
-            elif tag == "line":
-                x1 = float(elem.get("x1", 0))
-                y1 = float(elem.get("y1", 0))
-                x2 = float(elem.get("x2", 0))
-                y2 = float(elem.get("y2", 0))
-                return min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)
-
-            elif tag in ("polygon", "polyline"):
-                pts = parse_points(elem.get("points", ""))
-                xs = [p[0] for p in pts]
-                ys = [p[1] for p in pts]
-                return min(xs), min(ys), max(xs), max(ys)
-
-            elif tag == "path":
-                # Simple path bbox (handles M/L/H/V only)
-                import re
-                nums = list(map(float, re.findall(r"[-+]?\d*\.?\d+", elem.get("d", ""))))
-                xs = nums[0::2]
-                ys = nums[1::2]
-                return min(xs), min(ys), max(xs), max(ys)
-
-            else:
-                return None
-
-        shape_tags = [
-            f"{ns}path",
-            f"{ns}rect",
-            f"{ns}circle",
-            f"{ns}ellipse",
-            f"{ns}line",
-            f"{ns}polyline",
-            f"{ns}polygon",
-        ]
-
-        shapes = [e for e in root.iter() if e.tag in shape_tags]
-
-        svg_outputs = []
-
-        for shape in shapes:
-            bbox = get_bbox(shape)
-            if bbox is None:
-                continue
-
-            min_x, min_y, max_x, max_y = bbox
-            width = max_x - min_x
-            height = max_y - min_y
-
-            # Create new SVG
-            new_svg = ET.Element("svg", xmlns="http://www.w3.org/2000/svg")
-            new_svg.set("viewBox", f"0 0 {width} {height}")
-            new_svg.set("width", str(width))
-            new_svg.set("height", str(height))
-
-            # Clone shape and translate to origin
-            shape_clone = deepcopy(shape)
-
-            existing_transform = shape_clone.get("transform", "")
-            translate = f"translate({-min_x},{-min_y})"
-
-
-            if "transform" in shape_clone.attrib:
-                ## The transformation becomes a data-attribute for purposes of packing. The polygon will be invisible to the pack if it is transformed outside of its new view box, etc.
-                shape_clone.set("data-transform", f"{translate} {existing_transform}".strip())
-                del shape_clone.attrib["transform"]
-
-            # Remove namespaces from the cloned shape
-            strip_namespace(shape_clone)
-
-            new_svg.append(shape_clone)
-
-            svg_outputs.append(ET.tostring(new_svg, encoding="unicode"))
-
-        return svg_outputs
-
     def make_irregular_stock_then_pack(self):
         # An array of garment-shaped hole tesslations
-        garment_tesselations = []
+        irregular_stock_bins = []
         # Get the various "bins" from the stock.
-        self.bin = self._extract_shapes_as_svgs(self.bin)
+        extracted_bins = SVGTool.SVGTool.extract(self.stock)
 
-        print(f"DEBUG: New Array Bins: {self.bin}")
+        print(f"DEBUG: New Array Bins: {extracted_bins}")
 
-        for bin in self.bin:
-            # Doesn't return just sets a new self.bin
-            bin_tesslation = self._make_irregular_stock_with_packed_holes(bin)
-            garment_tesselations.append(bin_tesslation)
+        for bin in extracted_bins:
+            irregular_stock_bin = self._make_irregular_stock_with_packed_holes(bin)
+            irregular_stock_bins.append(irregular_stock_bin)
 
         # Replace the SVG stock with these garment-shaped hole tesselations
-        self.garment_shaped_hole_tesselation = garment_tesselations
-        self.bin = garment_tesselations
+        self.garment_shaped_hole_tesselation = irregular_stock_bins
 
-        print(f"DEBUG: New Array Bin (post-tesselation): {self.bin}")
+        print(f"DEBUG: New Array Bin (post-tesselation): {irregular_stock_bins}")
 
-        return self.pack()
-
-    def _get_bin_svg_size(self, bin):
-        root = ET.fromstring(bin)
-
-        width = float(root.get("width").replace("px", "").strip())
-        height = float(root.get("height").replace("px", "").strip())
-
-        return width, height
+        return self.pack(irregular_stock_bins, self.parts)
 
     def _make_irregular_stock_with_packed_holes(self, bin):
         discritization_tolerence_holes = 2.5
-        width, height = self._get_bin_svg_size(bin)
+        width, height = SVGTool.SVGTool.get_size(bin)
 
         holes = f"""
             <svg xmlns="http://www.w3.org/2000/svg"
@@ -357,15 +174,17 @@ class BinPack:
         # The result is the new bin with packed shapes interpreted as "holes" by packaide during self.pack()
         return packed_placed
 
-    def pack(self):
-        if not isinstance(self.parts, str):
+    def pack(self, bin, parts):
+        if not isinstance(parts, str):
             return {"error": "Please provide at least one part."}
 
+        if len(bin) < 1:
+            return {"error": "Please provide at least one bin."}
 
         # Attempts to pack as many of the parts as possible.
         result, placed, fails = packaide.pack(
-            self.bin,  # A list (array) of sheets (SVG documents)
-            self.parts,  # An SVG document containing the parts
+            bin,  # A list (array) of sheets (SVG documents)
+            parts,  # An SVG document containing the parts
             tolerance=2.5,  # Discretization tolerance
             offset=0,  # The offset distance around each shape (dilation)
             partial_solution=True,  # Whether to return a partial solution
@@ -373,16 +192,24 @@ class BinPack:
             persist=True  # Cache results to speed up next run
         )
 
-        print(f"DEBUG: result: {result}")
+        parts_packed = [svg for _, svg in result]
+
+        ## Apply important attributes "role" & data-draggable
+        parts_packed = [SVGTool.SVGTool.apply_attribute_to_shapes(elem, "data-draggable", "true") for elem in parts_packed]
+        parts_packed = [SVGTool.SVGTool.apply_attribute_to_shapes(elem, "role", "garment") for elem in
+                        parts_packed]
 
         result_object = {
+            ## Input
             "stock": self.stock,
             "parts": self.parts,
-            "bin": self.bin,
-            "garment_shaped_hole_tesselation": self.garment_shaped_hole_tesselation,
+            ## DEBUG : Tesselation
+            "bin_local": bin,
+            "parts_local": parts,
             "result": result,
+            "parts_packed": parts_packed,
             # Packed pieces plus the stock
-            # "garment_marker": combine_stock_garment_svg_strings(self.stock, result[0][1]),
+            "garment_marker": SVGTool.SVGTool.combine( parts_packed + [self.stock] ),
             "placed": placed,
             "fails": fails,
             "total": placed + fails,
