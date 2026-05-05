@@ -80,12 +80,9 @@ def restore_data_attributes(svg_string, merge_transforms=True, remove_namespaces
 class BinPack:
     def __init__(self):
         # Garment stock
-        self.stock = ""
+        self.stock = None
 
-        self.default_bin = """
-                   <svg width="300" height="300" viewBox="0 0 300 300">
-                   </svg>
-                """
+        self.default_bin = """<svg width="3000" height="3000" viewBox="0 0 3000 3000"></svg>"""
 
         self.parts = None
 
@@ -96,16 +93,19 @@ class BinPack:
         # Assume its all irregular for now.
         return True
 
-    def make_irregular_stock_then_pack(self):
+    def make_irregular_stock(self, bin, parts):
+        if not isinstance(bin, str) or len(bin) == 0:
+            raise TypeError(f"The make irregular stock process needs a bin. Bin: {bin} {type(bin)}")
+
         # An array of garment-shaped hole tesslations
         irregular_stock_bins = []
         # Get the various "bins" from the stock.
-        extracted_bins = SVGTool.SVGTool.extract(self.stock)
+        extracted_bins = SVGTool.SVGTool.extract(bin)
 
         print(f"DEBUG: New Array Bins: {extracted_bins}")
 
-        for bin in extracted_bins:
-            irregular_stock_bin = self._make_irregular_stock_with_packed_holes(bin)
+        for extracted_bin in extracted_bins:
+            irregular_stock_bin = self._make_irregular_stock_with_packed_holes(extracted_bin)
             irregular_stock_bins.append(irregular_stock_bin)
 
         # Replace the SVG stock with these garment-shaped hole tesselations
@@ -113,7 +113,7 @@ class BinPack:
 
         print(f"DEBUG: New Array Bin (post-tesselation): {irregular_stock_bins}")
 
-        return self.pack(irregular_stock_bins, self.parts)
+        return irregular_stock_bins, parts
 
     def _make_irregular_stock_with_packed_holes(self, bin):
         discritization_tolerence_holes = 2.5
@@ -174,16 +174,19 @@ class BinPack:
         # The result is the new bin with packed shapes interpreted as "holes" by packaide during self.pack()
         return packed_placed
 
-    def pack(self, bin, parts):
+    def pack(self, bins = None, parts = None):
         if not isinstance(parts, str):
-            return {"error": "Please provide at least one part."}
+            return {"error": f"Please provide at least one part. {parts} {isinstance(parts, str)}"}
 
-        if len(bin) < 1:
-            return {"error": "Please provide at least one bin."}
+        if bins is None or len(bins) == 0:
+            bins = [self.default_bin]
 
         # Attempts to pack as many of the parts as possible.
+
+        print(f"DEBUG: Bin: {bins}")
+
         result, placed, fails = packaide.pack(
-            bin,  # A list (array) of sheets (SVG documents)
+            bins,  # A list (array) of sheets (SVG documents)
             parts,  # An SVG document containing the parts
             tolerance=2.5,  # Discretization tolerance
             offset=0,  # The offset distance around each shape (dilation)
@@ -201,20 +204,24 @@ class BinPack:
 
         result_object = {
             ## Input
-            "stock": self.stock,
-            "parts": self.parts,
+            "parts": parts,
             ## DEBUG : Tesselation
-            "bin_local": bin,
+            "bin_local": bins,
             "parts_local": parts,
-            "result": result,
             "parts_packed": parts_packed,
-            # Packed pieces plus the stock
-            "garment_marker": SVGTool.SVGTool.combine( parts_packed + [self.stock] ),
+            ## Output
+            "result": result,
             "placed": placed,
             "fails": fails,
             "total": placed + fails,
             "description": "{} parts were placed. {} parts could not fit on the sheets".format(placed, fails),
         }
+
+        # iff stock is supplied..
+        if self.stock is not None:
+            result_object["stock"] = self.stock
+            # Supply a garment marker - Packed pieces plus the stock
+            result_object["garment_marker"] = SVGTool.SVGTool.combine(parts_packed + [self.stock])
 
         # If partial_solution was False, then either every part is placed or none
         # are. Otherwise, as many as possible are placed. placed and fails denote
