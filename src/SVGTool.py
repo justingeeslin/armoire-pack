@@ -22,6 +22,10 @@ class SVGTool:
 
     @staticmethod
     def extract(svg_string):
+
+        if not isinstance(svg_string, str):
+            raise TypeError(f"SVGTool.extract() takes a string as argument. {svg_string} {type(svg_string)}")
+
         print(f" DEBUG Extracting shapes as svgs {svg_string}")
         root = ET.fromstring(svg_string)
 
