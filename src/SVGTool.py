@@ -215,6 +215,8 @@ class SVGTool:
         for elem in root:
             elem.set(attribute, property)
 
+        SVGTool._strip_namespace(root)
+
         return ET.tostring(root, encoding="unicode")
 
     @staticmethod

@@ -8,7 +8,11 @@ packaide_path = os.path.join('/app', 'Packaide', 'python')
 if packaide_path not in sys.path:
     sys.path.append(packaide_path)
 
-import packaide
+try:
+    import packaide
+except ModuleNotFoundError:
+    shouldUsePackaideMock = True
+    print('Packaide not found, using packaide mock')
 
 import copy
 from copy import deepcopy
@@ -86,6 +90,9 @@ class BinPack:
 
         self.parts = None
 
+
+        self.willExtractBinsAndPackSeperately = False
+
         ## For debug purposes
         self.garment_shaped_hole_tesselation = None
 
@@ -102,7 +109,7 @@ class BinPack:
         # Get the various "bins" from the stock.
         extracted_bins = SVGTool.SVGTool.extract(bin)
 
-        print(f"DEBUG: New Array Bins: {extracted_bins}")
+        # print(f"DEBUG: New Array Bins: {extracted_bins}")
 
         for extracted_bin in extracted_bins:
             irregular_stock_bin = self._make_irregular_stock_with_packed_holes(extracted_bin)
@@ -111,7 +118,7 @@ class BinPack:
         # Replace the SVG stock with these garment-shaped hole tesselations
         self.garment_shaped_hole_tesselation = irregular_stock_bins
 
-        print(f"DEBUG: New Array Bin (post-tesselation): {irregular_stock_bins}")
+        # print(f"DEBUG: New Array Bin (post-tesselation): {irregular_stock_bins}")
 
         return irregular_stock_bins, parts
 
@@ -142,15 +149,18 @@ class BinPack:
         # Assume only 20% of the image will be empty.
         numberOfHoles = int(math.ceil(numberOfHoles * 0.2))
 
-        print("DEBUG numberOfHoles: ", numberOfHoles)
+        # print("DEBUG numberOfHoles: ", numberOfHoles)
         for i in range(numberOfHoles):
             holes = holes + f'<circle r="{holeWidth / 2}" />'
 
         holes = holes + "</svg>"
 
-        print(f"DEBUG: Creating a hole tesselation around: {bin}")
+        # print(f"DEBUG: Creating a hole tesselation around: {bin}")
 
         # print(f"DEBUG: Holes SVG: {holes}")
+
+        if shouldUsePackaideMock:
+            return None
 
         # Pack holds around the bin
         result, placed, fails = packaide.pack(
@@ -163,9 +173,9 @@ class BinPack:
             rotations=1,  # The number of rotations of parts to try
             persist=False  # Cache results to speed up next run
         )
-        print(f"DEBUG: result: {result}")
-        print(f"DEBUG: placed: {placed}")
-        print(f"DEBUG: fails: {fails}")
+        # print(f"DEBUG: result: {result}")
+        # print(f"DEBUG: placed: {placed}")
+        # print(f"DEBUG: fails: {fails}")
 
         packed_result = result[0][1]
         # Re-instate the transforms
@@ -175,6 +185,7 @@ class BinPack:
         return packed_placed
 
     def pack(self, bins = None, parts = None):
+
         if not isinstance(parts, str):
             return {"error": f"Please provide at least one part. {parts} {isinstance(parts, str)}"}
 
@@ -183,17 +194,22 @@ class BinPack:
 
         # Attempts to pack as many of the parts as possible.
 
-        print(f"DEBUG: Bin: {bins}")
+        # print(f"DEBUG: Bin: {bins}")
 
-        result, placed, fails = packaide.pack(
-            bins,  # A list (array) of sheets (SVG documents)
-            parts,  # An SVG document containing the parts
-            tolerance=2.5,  # Discretization tolerance
-            offset=0,  # The offset distance around each shape (dilation)
-            partial_solution=True,  # Whether to return a partial solution
-            rotations=1,  # The number of rotations of parts to try
-            persist=True  # Cache results to speed up next run
-        )
+        if shouldUsePackaideMock:
+            placed = 8
+            fails = 8
+            result = self.mock_result
+        else:
+            result, placed, fails = packaide.pack(
+                bins,  # A list (array) of sheets (SVG documents)
+                parts,  # An SVG document containing the parts
+                tolerance=2.5,  # Discretization tolerance
+                offset=0,  # The offset distance around each shape (dilation)
+                partial_solution=True,  # Whether to return a partial solution
+                rotations=1,  # The number of rotations of parts to try
+                persist=True  # Cache results to speed up next run
+            )
 
         parts_packed = [svg for _, svg in result]
 

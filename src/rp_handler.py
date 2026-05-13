@@ -1,6 +1,10 @@
 from BinPack import BinPack
 
-import packaide
+try:
+    import packaide
+except ModuleNotFoundError:
+    shouldUsePackaideMock = True
+    print('Packaide not found, using packaide mock')
 
 import runpod
 
