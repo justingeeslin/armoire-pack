@@ -8,6 +8,7 @@ packaide_path = os.path.join('/app', 'Packaide', 'python')
 if packaide_path not in sys.path:
     sys.path.append(packaide_path)
 
+shouldUsePackaideMock = False
 try:
     import packaide
 except ModuleNotFoundError:
@@ -90,9 +91,6 @@ class BinPack:
 
         self.parts = None
 
-
-        self.willExtractBinsAndPackSeperately = False
-
         ## For debug purposes
         self.garment_shaped_hole_tesselation = None
 
@@ -104,11 +102,13 @@ class BinPack:
         if not isinstance(bin, str) or len(bin) == 0:
             raise TypeError(f"The make irregular stock process needs a bin. Bin: {bin} {type(bin)}")
 
+
         # An array of garment-shaped hole tesslations
         irregular_stock_bins = []
-        # Get the various "bins" from the stock.
-        extracted_bins = SVGTool.SVGTool.extract(bin)
 
+        # # Get the various "bins" from the stock.
+        # extracted_bins = SVGTool.SVGTool.extract(bin)
+        extracted_bins = [bin]
         # print(f"DEBUG: New Array Bins: {extracted_bins}")
 
         for extracted_bin in extracted_bins:
@@ -160,29 +160,33 @@ class BinPack:
         # print(f"DEBUG: Holes SVG: {holes}")
 
         if shouldUsePackaideMock:
-            return None
+            placed = 8
+            fails = 8
+            result = self.mock_hole_result
+        else:
+            # Pack holds around the bin
+            result, placed, fails = packaide.pack(
+                [bin],
+                holes,
+                tolerance=discritization_tolerence_holes,  # Discretization tolerance
+                # Would dialating the holes give you more of an edge buffer?
+                offset=0,  # The offset distance around each shape (dilation)
+                partial_solution=True,  # Whether to return a partial solution
+                rotations=1,  # The number of rotations of parts to try
+                persist=False  # Cache results to speed up next run
+            )
 
-        # Pack holds around the bin
-        result, placed, fails = packaide.pack(
-            [bin],
-            holes,
-            tolerance=discritization_tolerence_holes,  # Discretization tolerance
-            # Would dialating the holes give you more of an edge buffer?
-            offset=0,  # The offset distance around each shape (dilation)
-            partial_solution=True,  # Whether to return a partial solution
-            rotations=1,  # The number of rotations of parts to try
-            persist=False  # Cache results to speed up next run
-        )
-        # print(f"DEBUG: result: {result}")
+        print(f"DEBUG: result: {result}")
         # print(f"DEBUG: placed: {placed}")
         # print(f"DEBUG: fails: {fails}")
 
         packed_result = result[0][1]
+
         # Re-instate the transforms
-        packed_placed = restore_data_attributes(packed_result)
+        # packed_result = restore_data_attributes(packed_result)
 
         # The result is the new bin with packed shapes interpreted as "holes" by packaide during self.pack()
-        return packed_placed
+        return packed_result
 
     def pack(self, bins = None, parts = None):
 
@@ -223,6 +227,7 @@ class BinPack:
             "parts": parts,
             ## DEBUG : Tesselation
             "bin_local": bins,
+            "garment_shaped_hole_tesselation": self.garment_shaped_hole_tesselation,
             "parts_local": parts,
             "parts_packed": parts_packed,
             ## Output
