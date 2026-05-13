@@ -244,6 +244,26 @@ class BinPack:
             # Supply a garment marker - Packed pieces plus the stock
             result_object["garment_marker"] = SVGTool.SVGTool.combine(parts_packed + [self.stock])
 
+        def resize_and_namespace_svg(svg_string: str, width=2000, height=1000) -> str:
+            # Parse SVG
+            root = ET.fromstring(svg_string)
+            # Ensure root tag is plain "svg"
+            if "}" in root.tag:
+                root.tag = root.tag.split("}", 1)[1]
+            # Ensure xmlns exists
+            root.set("xmlns", "http://www.w3.org/2000/svg")
+            # Set width and height
+            root.set("width", str(width))
+            root.set("height", str(height))
+            # Optional: update viewBox if missing
+            if "viewBox" not in root.attrib:
+                root.set("viewBox", f"0 0 {width} {height}")
+
+            return ET.tostring(root, encoding="unicode")
+
+        if "garment_marker" in result_object:
+            result_object["garment_marker"] = resize_and_namespace_svg(result_object["garment_marker"])
+
         # If partial_solution was False, then either every part is placed or none
         # are. Otherwise, as many as possible are placed. placed and fails denote
         # the number of parts that could be and could not be placed respectively
